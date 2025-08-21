@@ -7150,11 +7150,10 @@ function renderClients() {
     initializeSimpleSearch();
     setupClientPageButtons();
     
-    console.log('✅ Enhanced clients page rendered successfully with filters and search initialized');
+    // Apply default sorting by revenue
+    applySortFilter('revenue');
     
-    // Initialize client filters and search functionality
-    initializeClientFilters();
-    initializeSimpleSearch();
+    console.log('✅ Enhanced clients page rendered successfully with filters and search initialized');
     
     // Setup client page buttons with a delay to ensure DOM is ready
     setTimeout(() => {
