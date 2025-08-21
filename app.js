@@ -5093,6 +5093,8 @@ function renderRecentInvoices() {
         const isOverdue = invoice.status === 'Pending' && new Date(invoice.dueDate) < new Date();
         const actualStatus = isOverdue ? 'overdue' : invoice.status.toLowerCase();
         const statusText = isOverdue ? 'Overdue' : invoice.status;
+        const initials = getClientInitials(invoice.client);
+        const avatarClass = getClientAvatarClass(invoice.client);
         
         return `
             <tr class="table-row modern" style="animation-delay: ${index * 100}ms">
@@ -5102,27 +5104,29 @@ function renderRecentInvoices() {
                     </div>
                 </td>
                 <td>
-                    <div class="client-cell">
-                        <div class="client-name">${invoice.client}</div>
-                        <div class="client-due">Due: ${formatDate(invoice.dueDate)}</div>
+                    <div class="client-info">
+                        <div class="client-avatar ${avatarClass}">${initials}</div>
+                        <div class="client-details">
+                            <span class="client-name">${invoice.client}</span>
+                            <span class="client-subtitle">Due: ${formatDate(invoice.dueDate)}</span>
+                        </div>
                     </div>
                 </td>
                 <td>
-                    <div class="amount-cell">
-                        <div class="amount-value">₹${formatNumber(invoice.amount)}</div>
-                        <div class="amount-subtitle">${invoice.items?.length || 0} items</div>
+                    <div class="amount-display">
+                        <span class="currency">₹</span>
+                        <span class="amount">${formatNumber(invoice.amount)}</span>
+                    </div>
+                    <div class="amount-subtitle" style="font-size: 12px; color: #64748b; margin-top: 2px;">${invoice.items?.length || 0} items</div>
+                </td>
+                <td>
+                    <div class="date-info">
+                        <span class="date">${formatDate(invoice.date)}</span>
                     </div>
                 </td>
                 <td>
-                    <div class="date-cell">
-                        <div class="date-value">${formatDate(invoice.date)}</div>
-                    </div>
-                </td>
-                <td>
-                    <span class="status-badge modern ${actualStatus}">
-                        <span class="status-dot"></span>
-                        <span class="status-text">${statusText}</span>
-                        ${isOverdue ? '<span class="status-pulse"></span>' : ''}
+                    <span class="status-badge status-${actualStatus}">
+                        ${statusText}
                     </span>
                 </td>
                 <td>

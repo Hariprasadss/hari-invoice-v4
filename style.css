@@ -750,7 +750,7 @@ body {
 .modern-expenses-table th,
 .enhanced-invoices-table th,
 .analytics-table th {
-  padding: 16px 20px;
+  padding: 6px 20px;
   text-align: left;
   font-weight: 600;
   font-size: 13px;
@@ -799,6 +799,7 @@ body {
   transition: all 0.3s ease;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
+  background: white;
 }
 
 .modern-table tbody tr:hover {
@@ -816,7 +817,7 @@ body {
 .modern-expenses-table td,
 .enhanced-invoices-table td,
 .analytics-table td {
-  padding: 18px 20px;
+  padding: 6px 20px;
   vertical-align: middle;
   color: var(--text-primary);
   font-size: 14px;
@@ -6382,6 +6383,12 @@ select.form-control {
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: flex-start;
+    width: fit-content;
+}
+
+.action-buttons.compact {
+    gap: 6px;
 }
 
 .action-btn-modern {
@@ -8468,6 +8475,13 @@ select.form-control {
 
 .actions-cell {
     width: 120px;
+    text-align: left;
+    padding-left: 10px !important;
+}
+
+.actions-cell .action-buttons {
+    justify-content: flex-start;
+    margin-left: 0;
 }
 
 /* Enhanced Empty State */
