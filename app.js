@@ -6224,6 +6224,17 @@ function calculateAllClientTotals() {
     console.log('Client totals calculation completed');
 }
 
+// Helper functions for enhanced client display
+function getClientInitials(clientName) {
+    return clientName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
+}
+
+function getClientAvatarClass(clientName) {
+    const colors = ['avatar-purple', 'avatar-pink', 'avatar-orange', 'avatar-blue', 'avatar-green', 'avatar-indigo'];
+    const hash = clientName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+}
+
 // Enhanced Invoice Management Functions
 function renderInvoicesTable(invoices = appData.invoices) {
     const tbody = document.getElementById('invoices-body');
@@ -6236,6 +6247,8 @@ function renderInvoicesTable(invoices = appData.invoices) {
         const today = new Date();
         const isOverdue = invoice.status === 'Pending' && dueDate < today;
         const statusClass = isOverdue ? 'overdue' : invoice.status.toLowerCase();
+        const initials = getClientInitials(invoice.client);
+        const avatarClass = getClientAvatarClass(invoice.client);
         
         return `
             <tr class="invoice-row" data-invoice-id="${invoice.id}">
@@ -6250,8 +6263,11 @@ function renderInvoicesTable(invoices = appData.invoices) {
                 </td>
                 <td class="client-cell">
                     <div class="client-info">
-                        <span class="client-name">${invoice.client}</span>
-                        <span class="client-subtitle">Invoice</span>
+                        <div class="client-avatar ${avatarClass}">${initials}</div>
+                        <div class="client-details">
+                            <span class="client-name">${invoice.client}</span>
+                            <span class="client-subtitle">Invoice</span>
+                        </div>
                     </div>
                 </td>
                 <td class="amount-cell">
