@@ -219,6 +219,77 @@
                     </div>
                 </div>
 
+                <!-- Income vs Expenses Report Section -->
+                <div class="charts-section">
+                    <div class="chart-container" style="grid-column: 1 / -1;">
+                        <div class="chart-header">
+                            <h3>📊 Income vs Expenses Report</h3>
+                            <div class="chart-actions">
+                                <select id="income-expenses-period-filter" class="chart-btn" onchange="updateIncomeExpensesFilter()">
+                                    <option value="12">Last 12 Months</option>
+                                    <option value="6">Last 6 Months</option>
+                                    <option value="3">Last 3 Months</option>
+                                    <option value="ytd">Year to Date</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
+                                <button class="chart-btn" id="chart-view-toggle" onclick="toggleChartView()">📈 Switch View</button>
+                                <button class="chart-btn" onclick="exportIncomeVsExpensesReport()">Export CSV</button>
+                                <button class="chart-btn active" onclick="refreshIncomeVsExpensesChart()">Refresh</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Date Range (Initially Hidden) -->
+                        <div id="custom-date-range" style="display: none; padding: 10px 20px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 10px;">
+                            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                                <div>
+                                    <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">From Date</label>
+                                    <input type="date" id="income-expenses-from-date" class="chart-btn" style="padding: 8px 12px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">To Date</label>
+                                    <input type="date" id="income-expenses-to-date" class="chart-btn" style="padding: 8px 12px;">
+                                </div>
+                                <button class="chart-btn" onclick="applyCustomDateRange()" style="margin-top: 18px;">Apply</button>
+                            </div>
+                        </div>
+                        <div style="position: relative; height: 300px; background: linear-gradient(180deg, rgba(34, 197, 94, 0.02) 0%, rgba(239, 68, 68, 0.02) 100%); border-radius: 12px; padding: 20px;">
+                            <canvas id="incomeVsExpensesChart"></canvas>
+                        </div>
+                        
+                        <!-- Summary Cards for Income vs Expenses -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">
+                            <div class="summary-card">
+                                <div class="summary-icon" style="background: linear-gradient(135deg, #22c55e, #16a34a);">💰</div>
+                                <div class="summary-content">
+                                    <div class="summary-value" id="total-income-summary">₹0</div>
+                                    <div class="summary-label">Total Income</div>
+                                </div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">💸</div>
+                                <div class="summary-content">
+                                    <div class="summary-value" id="total-expenses-summary">₹0</div>
+                                    <div class="summary-label">Total Expenses</div>
+                                </div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">📈</div>
+                                <div class="summary-content">
+                                    <div class="summary-value" id="net-profit-summary">₹0</div>
+                                    <div class="summary-label">Net Profit</div>
+                                </div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">📊</div>
+                                <div class="summary-content">
+                                    <div class="summary-value" id="profit-margin-summary">0%</div>
+                                    <div class="summary-label">Profit Margin</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Enhanced Recent Invoices -->
                 <div class="recent-invoices">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 24px 24px 0;">

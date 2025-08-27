@@ -331,6 +331,42 @@ class ExpenseUI {
                 </div>
             </div>
 
+            <!-- Income vs Expenses Quick View Section -->
+            <div class="charts-container" style="margin-bottom: 32px;">
+                <div class="chart-wrapper full-width">
+                    <div class="chart-header">
+                        <h3>📊 Income vs Expenses Overview</h3>
+                        <div class="chart-actions">
+                            <button class="btn-modern btn-secondary" onclick="exportIncomeVsExpensesReport()">Export CSV</button>
+                            <button class="btn-modern btn-primary" onclick="refreshIncomeVsExpensesChart()">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="chart-content" style="height: 280px;">
+                        <canvas id="expensePageIncomeVsExpensesChart" width="400" height="250"></canvas>
+                    </div>
+                    
+                    <!-- Quick Summary Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                        <div class="mini-summary-card">
+                            <div class="mini-summary-value" id="expense-page-total-income">₹0</div>
+                            <div class="mini-summary-label">Total Income</div>
+                        </div>
+                        <div class="mini-summary-card">
+                            <div class="mini-summary-value" id="expense-page-total-expenses">₹0</div>
+                            <div class="mini-summary-label">Total Expenses</div>
+                        </div>
+                        <div class="mini-summary-card">
+                            <div class="mini-summary-value" id="expense-page-net-profit">₹0</div>
+                            <div class="mini-summary-label">Net Profit</div>
+                        </div>
+                        <div class="mini-summary-card">
+                            <div class="mini-summary-value" id="expense-page-profit-margin">0%</div>
+                            <div class="mini-summary-label">Profit Margin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Enhanced Table Container -->
             <div class="enhanced-table-container">                    
                     <!-- Revamped Filters UI -->
@@ -1037,6 +1073,9 @@ class ExpenseUI {
 
         this.renderExpensesTable(filteredExpenses);
         this.updateResultsCount(filteredExpenses.length);
+        
+        // Update Income vs Expenses chart with filtered data
+        this.renderIncomeVsExpensesChartOnExpensePage();
     }
 
     
@@ -1482,6 +1521,7 @@ class ExpenseUI {
         // Debounced chart creation to prevent rapid re-renders
         this.chartRenderTimeout = setTimeout(() => {
             this.createCharts(expenses);
+            this.renderIncomeVsExpensesChartOnExpensePage(expenses);
         }, 100);
     }
     
@@ -1604,6 +1644,164 @@ class ExpenseUI {
             labels: sorted.map(([cat]) => cat),
             values: sorted.map(([, amount]) => amount)
         };
+    }
+
+    renderIncomeVsExpensesChartOnExpensePage() {
+        const ctx = document.getElementById('expensePageIncomeVsExpensesChart');
+        if (!ctx) return;
+
+        // Destroy existing chart if it exists
+        if (this.incomeVsExpensesChart && typeof this.incomeVsExpensesChart.destroy === 'function') {
+            this.incomeVsExpensesChart.destroy();
+            this.incomeVsExpensesChart = null;
+        }
+
+        // Get filtered expenses data
+        const filteredExpenses = this.getFilteredExpenses();
+        
+        // Calculate date range from filtered expenses
+        let fromDate = null, toDate = null;
+        if (filteredExpenses.length > 0) {
+            const dates = filteredExpenses.map(e => new Date(e.date)).sort((a, b) => a - b);
+            fromDate = dates[0];
+            toDate = dates[dates.length - 1];
+            
+            // Extend range to include full months
+            fromDate = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
+            toDate = new Date(toDate.getFullYear(), toDate.getMonth() + 1, 0);
+        }
+        
+        // Get income vs expenses data for the same period as filtered expenses
+        const filterOptions = fromDate && toDate ? 
+            { fromDate: fromDate.toISOString().split('T')[0], toDate: toDate.toISOString().split('T')[0] } : 
+            { months: 6 }; // Default to 6 months if no expenses
+            
+        const data = getIncomeVsExpensesData(filterOptions);
+
+        this.incomeVsExpensesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: data.income,
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    },
+                    {
+                        label: 'Expenses',
+                        data: data.expenses,
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            padding: 15,
+                            font: {
+                                size: 12,
+                                weight: '500'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12,
+                        callbacks: {
+                            afterBody: function(tooltipItems) {
+                                const index = tooltipItems[0].dataIndex;
+                                const income = data.income[index];
+                                const expenses = data.expenses[index];
+                                const profit = income - expenses;
+                                const profitText = profit >= 0 ? `✅ Profit: ₹${formatNumber(profit)}` : `❌ Loss: ₹${formatNumber(Math.abs(profit))}`;
+                                return ['\n' + profitText];
+                            },
+                            label: function(context) {
+                                const label = context.dataset.label;
+                                const value = context.raw;
+                                return `${label}: ₹${formatNumber(value)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + formatNumber(value);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1200,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+
+        // Update mini summary cards
+        this.updateExpensePageSummary(data);
+    }
+
+    updateExpensePageSummary(data) {
+        const totalIncome = data.income.reduce((sum, amount) => sum + amount, 0);
+        const totalExpenses = data.expenses.reduce((sum, amount) => sum + amount, 0);
+        const netProfit = totalIncome - totalExpenses;
+        const profitMargin = totalIncome > 0 ? (netProfit / totalIncome * 100) : 0;
+
+        // Update DOM elements
+        const totalIncomeEl = document.getElementById('expense-page-total-income');
+        const totalExpensesEl = document.getElementById('expense-page-total-expenses');
+        const netProfitEl = document.getElementById('expense-page-net-profit');
+        const profitMarginEl = document.getElementById('expense-page-profit-margin');
+
+        if (totalIncomeEl) totalIncomeEl.textContent = `₹${this.formatNumber(totalIncome)}`;
+        if (totalExpensesEl) totalExpensesEl.textContent = `₹${this.formatNumber(totalExpenses)}`;
+        if (netProfitEl) {
+            netProfitEl.textContent = `₹${this.formatNumber(netProfit)}`;
+            // Change color based on profit/loss
+            netProfitEl.style.color = netProfit >= 0 ? '#22c55e' : '#ef4444';
+        }
+        if (profitMarginEl) {
+            profitMarginEl.textContent = `${profitMargin.toFixed(1)}%`;
+            // Change color based on margin
+            profitMarginEl.style.color = profitMargin >= 0 ? '#22c55e' : '#ef4444';
+        }
     }
 
     applyFilters() {
@@ -4084,6 +4282,192 @@ function calculateMonthlyEarnings() {
                                    .sort((a, b) => a.month.localeCompare(b.month));
 }
 
+// New function to calculate monthly expenses
+function calculateMonthlyExpenses() {
+    if (!window.expenseManager || !window.expenseManager.expenses) {
+        return [];
+    }
+    
+    const monthlyData = new Map();
+    
+    window.expenseManager.expenses.forEach(expense => {
+        const d = new Date(expense.date);
+        if (isNaN(d.getTime())) return;
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData.set(monthKey, (monthlyData.get(monthKey) || 0) + expense.amount);
+    });
+    
+    return Array.from(monthlyData, ([month, amount]) => ({ month, amount }))
+           .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+// New function to generate Income vs Expenses report data
+function getIncomeVsExpensesData(filterOptions = {}) {
+    const { 
+        months = 12, 
+        fromDate = null, 
+        toDate = null, 
+        period = 'months' 
+    } = filterOptions;
+    
+    let monthlyExpenses, monthlyIncome;
+    
+    if (fromDate && toDate) {
+        // Custom date range
+        monthlyExpenses = calculateMonthlyExpensesForRange(fromDate, toDate);
+        monthlyIncome = calculateMonthlyIncomeForRange(fromDate, toDate);
+    } else if (period === 'ytd') {
+        // Year to date
+        const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+        const now = new Date();
+        monthlyExpenses = calculateMonthlyExpensesForRange(startOfYear, now);
+        monthlyIncome = calculateMonthlyIncomeForRange(startOfYear, now);
+    } else {
+        // Last N months
+        monthlyExpenses = calculateMonthlyExpensesForPeriod(months);
+        monthlyIncome = calculateMonthlyIncomeForPeriod(months);
+    }
+    
+    // Get all unique months
+    const allMonths = new Set();
+    monthlyIncome.forEach(item => allMonths.add(item.month));
+    monthlyExpenses.forEach(item => allMonths.add(item.month));
+    
+    const sortedMonths = Array.from(allMonths).sort();
+    
+    // Create income and expense maps for quick lookup
+    const incomeMap = new Map(monthlyIncome.map(item => [item.month, item.amount]));
+    const expenseMap = new Map(monthlyExpenses.map(item => [item.month, item.amount]));
+    
+    return {
+        labels: sortedMonths.map(monthKey => {
+            const [year, month] = monthKey.split('-');
+            return new Date(year, month - 1).toLocaleDateString('en-IN', { 
+                month: 'short', 
+                year: 'numeric' 
+            });
+        }),
+        income: sortedMonths.map(month => incomeMap.get(month) || 0),
+        expenses: sortedMonths.map(month => expenseMap.get(month) || 0),
+        netProfit: sortedMonths.map(month => 
+            (incomeMap.get(month) || 0) - (expenseMap.get(month) || 0)
+        )
+    };
+}
+
+// Helper functions for filtered data calculation
+function calculateMonthlyExpensesForPeriod(months) {
+    if (!window.expenseManager || !window.expenseManager.expenses) {
+        return [];
+    }
+    
+    const monthlyData = new Map();
+    const now = new Date();
+    
+    // Initialize last N months
+    for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData.set(monthKey, 0);
+    }
+    
+    // Add expense data
+    window.expenseManager.expenses.forEach(expense => {
+        const d = new Date(expense.date);
+        if (isNaN(d.getTime())) return;
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (monthlyData.has(monthKey)) {
+            monthlyData.set(monthKey, monthlyData.get(monthKey) + expense.amount);
+        }
+    });
+    
+    return Array.from(monthlyData, ([month, amount]) => ({ month, amount }));
+}
+
+function calculateMonthlyIncomeForPeriod(months) {
+    const monthlyData = new Map();
+    const now = new Date();
+    
+    // Initialize last N months
+    for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData.set(monthKey, 0);
+    }
+    
+    // Add income data from paid invoices
+    appData.invoices
+        .filter(inv => inv.status === 'Paid')
+        .forEach(({ date, amount }) => {
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return;
+            const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (monthlyData.has(monthKey)) {
+                monthlyData.set(monthKey, monthlyData.get(monthKey) + amount);
+            }
+        });
+    
+    return Array.from(monthlyData, ([month, amount]) => ({ month, amount }));
+}
+
+function calculateMonthlyExpensesForRange(fromDate, toDate) {
+    if (!window.expenseManager || !window.expenseManager.expenses) {
+        return [];
+    }
+    
+    const monthlyData = new Map();
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    
+    // Initialize months in range
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (current <= end) {
+        const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData.set(monthKey, 0);
+        current.setMonth(current.getMonth() + 1);
+    }
+    
+    // Add expense data in range
+    window.expenseManager.expenses.forEach(expense => {
+        const d = new Date(expense.date);
+        if (isNaN(d.getTime()) || d < start || d > end) return;
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (monthlyData.has(monthKey)) {
+            monthlyData.set(monthKey, monthlyData.get(monthKey) + expense.amount);
+        }
+    });
+    
+    return Array.from(monthlyData, ([month, amount]) => ({ month, amount }));
+}
+
+function calculateMonthlyIncomeForRange(fromDate, toDate) {
+    const monthlyData = new Map();
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    
+    // Initialize months in range
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (current <= end) {
+        const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData.set(monthKey, 0);
+        current.setMonth(current.getMonth() + 1);
+    }
+    
+    // Add income data in range
+    appData.invoices
+        .filter(inv => inv.status === 'Paid')
+        .forEach(({ date, amount }) => {
+            const d = new Date(date);
+            if (isNaN(d.getTime()) || d < start || d > end) return;
+            const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (monthlyData.has(monthKey)) {
+                monthlyData.set(monthKey, monthlyData.get(monthKey) + amount);
+            }
+        });
+    
+    return Array.from(monthlyData, ([month, amount]) => ({ month, amount }));
+}
+
 function calculateQuarterlyEarnings(invoices = appData.invoices) {
     const quarterlyData = new Map();
     
@@ -4863,6 +5247,11 @@ function renderDashboard() {
     // Render charts with enhanced animations
     setTimeout(() => {
         renderCharts();
+        
+        // Render Income vs Expenses chart
+        setTimeout(() => {
+            renderIncomeVsExpensesChart();
+        }, 200);
         
         // Remove loading state
         if (dashboardPage) {
@@ -5678,6 +6067,336 @@ const animationUtils = {
 
 function setupAnalyticsFilters() {
     console.log('Analytics filters setup complete');
+}
+
+// Income vs Expenses Chart and Summary Functions
+function renderIncomeVsExpensesChart() {
+    const ctx = document.getElementById('incomeVsExpensesChart');
+    if (!ctx) return;
+
+    // Destroy existing chart if it exists
+    if (window.incomeVsExpensesChart && typeof window.incomeVsExpensesChart.destroy === 'function') {
+        window.incomeVsExpensesChart.destroy();
+        window.incomeVsExpensesChart = null;
+    }
+
+    // Get income vs expenses data with current filters
+    const data = getIncomeVsExpensesData(currentFilterOptions);
+
+    window.incomeVsExpensesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: data.income,
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                },
+                {
+                    label: 'Expenses',
+                    data: data.expenses,
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        padding: 20,
+                        font: {
+                            size: 13,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: 'rgba(59, 130, 246, 0.5)',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 16,
+                    callbacks: {
+                        afterBody: function(tooltipItems) {
+                            const index = tooltipItems[0].dataIndex;
+                            const income = data.income[index];
+                            const expenses = data.expenses[index];
+                            const profit = income - expenses;
+                            const profitText = profit >= 0 ? `Profit: ₹${formatNumber(profit)}` : `Loss: ₹${formatNumber(Math.abs(profit))}`;
+                            return ['\n' + profitText];
+                        },
+                        label: function(context) {
+                            const label = context.dataset.label;
+                            const value = context.raw;
+                            return `${label}: ₹${formatNumber(value)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '₹' + formatNumber(value);
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1200,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+
+    // Update summary cards
+    updateIncomeVsExpensesSummary(data);
+}
+
+function updateIncomeVsExpensesSummary(data) {
+    const totalIncome = data.income.reduce((sum, amount) => sum + amount, 0);
+    const totalExpenses = data.expenses.reduce((sum, amount) => sum + amount, 0);
+    const netProfit = totalIncome - totalExpenses;
+    const profitMargin = totalIncome > 0 ? (netProfit / totalIncome * 100) : 0;
+
+    // Update DOM elements
+    const totalIncomeEl = document.getElementById('total-income-summary');
+    const totalExpensesEl = document.getElementById('total-expenses-summary');
+    const netProfitEl = document.getElementById('net-profit-summary');
+    const profitMarginEl = document.getElementById('profit-margin-summary');
+
+    if (totalIncomeEl) totalIncomeEl.textContent = `₹${formatNumber(totalIncome)}`;
+    if (totalExpensesEl) totalExpensesEl.textContent = `₹${formatNumber(totalExpenses)}`;
+    if (netProfitEl) {
+        netProfitEl.textContent = `₹${formatNumber(netProfit)}`;
+        // Change color based on profit/loss
+        netProfitEl.style.color = netProfit >= 0 ? '#22c55e' : '#ef4444';
+    }
+    if (profitMarginEl) {
+        profitMarginEl.textContent = `${profitMargin.toFixed(1)}%`;
+        // Change color based on margin
+        profitMarginEl.style.color = profitMargin >= 0 ? '#22c55e' : '#ef4444';
+    }
+}
+
+function refreshIncomeVsExpensesChart() {
+    // Recalculate monthly earnings and render chart
+    calculateMonthlyEarnings();
+    renderIncomeVsExpensesChart();
+    showToast('Income vs Expenses report refreshed!', 'success');
+}
+
+function exportIncomeVsExpensesReport() {
+    const data = getIncomeVsExpensesData();
+    
+    // Create CSV content
+    let csvContent = 'Month,Income,Expenses,Net Profit,Profit Margin %\n';
+    
+    for (let i = 0; i < data.labels.length; i++) {
+        const month = data.labels[i];
+        const income = data.income[i];
+        const expenses = data.expenses[i];
+        const netProfit = data.netProfit[i];
+        const profitMargin = income > 0 ? (netProfit / income * 100).toFixed(2) : '0.00';
+        
+        csvContent += `${month},${income},${expenses},${netProfit},${profitMargin}\n`;
+    }
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `income-vs-expenses-report-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('Income vs Expenses report exported successfully!', 'success');
+}
+
+// Chart view toggle functionality
+let currentChartView = 'bar'; // 'bar' or 'summary'
+let currentFilterOptions = { months: 12 }; // Default filter
+
+function updateIncomeExpensesFilter() {
+    const periodFilter = document.getElementById('income-expenses-period-filter');
+    const customDateRange = document.getElementById('custom-date-range');
+    
+    if (!periodFilter) return;
+    
+    const value = periodFilter.value;
+    
+    if (value === 'custom') {
+        customDateRange.style.display = 'block';
+        return;
+    } else {
+        customDateRange.style.display = 'none';
+    }
+    
+    // Update filter options based on selection
+    if (value === 'ytd') {
+        currentFilterOptions = { period: 'ytd' };
+    } else {
+        currentFilterOptions = { months: parseInt(value) };
+    }
+    
+    // Re-render the current chart view
+    if (currentChartView === 'summary') {
+        renderSummaryChart();
+    } else {
+        renderIncomeVsExpensesChart();
+    }
+}
+
+function applyCustomDateRange() {
+    const fromDate = document.getElementById('income-expenses-from-date').value;
+    const toDate = document.getElementById('income-expenses-to-date').value;
+    
+    if (!fromDate || !toDate) {
+        showToast('Please select both from and to dates', 'warning');
+        return;
+    }
+    
+    if (new Date(fromDate) > new Date(toDate)) {
+        showToast('From date cannot be later than to date', 'error');
+        return;
+    }
+    
+    currentFilterOptions = {
+        fromDate: fromDate,
+        toDate: toDate
+    };
+    
+    // Re-render the current chart view
+    if (currentChartView === 'summary') {
+        renderSummaryChart();
+    } else {
+        renderIncomeVsExpensesChart();
+    }
+    
+    showToast('Date range applied successfully', 'success');
+}
+
+function toggleChartView() {
+    currentChartView = currentChartView === 'bar' ? 'summary' : 'bar';
+    const toggleBtn = document.getElementById('chart-view-toggle');
+    
+    if (currentChartView === 'summary') {
+        toggleBtn.innerHTML = '📊 Detail View';
+        renderSummaryChart();
+    } else {
+        toggleBtn.innerHTML = '📈 Simple View';
+        renderIncomeVsExpensesChart();
+    }
+}
+
+function renderSummaryChart() {
+    const ctx = document.getElementById('incomeVsExpensesChart');
+    if (!ctx) return;
+
+    // Destroy existing chart if it exists
+    if (window.incomeVsExpensesChart && typeof window.incomeVsExpensesChart.destroy === 'function') {
+        window.incomeVsExpensesChart.destroy();
+        window.incomeVsExpensesChart = null;
+    }
+
+    // Get income vs expenses data with current filters
+    const data = getIncomeVsExpensesData(currentFilterOptions);
+    const totalIncome = data.income.reduce((sum, amount) => sum + amount, 0);
+    const totalExpenses = data.expenses.reduce((sum, amount) => sum + amount, 0);
+
+    window.incomeVsExpensesChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Income Available', 'Expenses'],
+            datasets: [{
+                data: [Math.max(0, totalIncome - totalExpenses), totalExpenses],
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(34, 197, 94, 1)',
+                    'rgba(239, 68, 68, 1)'
+                ],
+                borderWidth: 3,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 13,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: 'rgba(59, 130, 246, 0.5)',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 16,
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = totalIncome;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                            return `${context.label}: ₹${formatNumber(value)} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                duration: 1200,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+
+    // Update summary cards
+    updateIncomeVsExpensesSummary(data);
 }
 
 // IMPROVED: Compact action buttons for invoices
