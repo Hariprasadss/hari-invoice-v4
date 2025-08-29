@@ -1,0 +1,41 @@
+# Sensitive configuration files
+config.js
+.env
+.env.local
+.env.production
+
+# Node modules (if you add them later)
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# Database files (if any)
+*.db
+*.sqlite
+
+# Cache
+.cache/

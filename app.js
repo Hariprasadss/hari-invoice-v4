@@ -3112,15 +3112,35 @@ if (!checkAuth()) {
     throw new Error('Authentication required');
 }
 
-// Supabase Configuration
-const SUPABASE_URL = 'https://kgdewraoanlaqewpbdlo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZGV3cmFvYW5sYXFld3BiZGxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MTg3NDksImV4cCI6MjA2OTI5NDc0OX0.wBgDDHcdK0Q9mN6uEPQFEO8gXiJdnrntLJW3dUdh89M';
+// Supabase Configuration - Now using config.js
+let SUPABASE_URL, SUPABASE_ANON_KEY;
+
+// Initialize configuration
+function initializeConfig() {
+    if (typeof window.appConfig !== 'undefined') {
+        SUPABASE_URL = window.appConfig.supabase.url;
+        SUPABASE_ANON_KEY = window.appConfig.supabase.anonKey;
+        console.log('✅ Configuration loaded successfully');
+        return true;
+    } else {
+        console.error('❌ Configuration not found. Please create config.js from config.template.js');
+        showToast('Configuration error. Please check console.', 'error');
+        return false;
+    }
+}
 
 // Initialize Supabase client with better error handling
 let supabaseClient;
 
 function initializeSupabase() {
     try {
+        // First ensure config is loaded
+        if (!initializeConfig()) {
+            console.warn('Supabase not available due to missing configuration');
+            supabaseClient = null;
+            return false;
+        }
+
         // Check multiple ways Supabase might be available
         if (typeof window !== 'undefined') {
             if (window.supabase && typeof window.supabase.createClient === 'function') {
