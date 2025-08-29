@@ -1,0 +1,13 @@
+{
+  "name": "hari-invoice-v4",
+  "version": "1.0.0",
+  "description": "Invoice Management Application",
+  "main": "index.html",
+  "scripts": {
+    "build": "node build.js",
+    "start": "python3 -m http.server 8000"
+  },
+  "keywords": ["invoice", "management", "supabase"],
+  "author": "Hari",
+  "license": "MIT"
+}

@@ -3117,16 +3117,28 @@ let SUPABASE_URL, SUPABASE_ANON_KEY;
 
 // Initialize configuration
 function initializeConfig() {
+    // Try to load from local config.js first (for development)
     if (typeof window.appConfig !== 'undefined') {
         SUPABASE_URL = window.appConfig.supabase.url;
         SUPABASE_ANON_KEY = window.appConfig.supabase.anonKey;
-        console.log('✅ Configuration loaded successfully');
+        console.log('✅ Configuration loaded from config.js');
         return true;
-    } else {
-        console.error('❌ Configuration not found. Please create config.js from config.template.js');
-        showToast('Configuration error. Please check console.', 'error');
-        return false;
     }
+    
+    // Fallback to environment variables (for production/Netlify)
+    const urlMeta = document.querySelector('meta[name="supabase-url"]');
+    const keyMeta = document.querySelector('meta[name="supabase-key"]');
+    
+    if (urlMeta && keyMeta && urlMeta.content && keyMeta.content) {
+        SUPABASE_URL = urlMeta.content;
+        SUPABASE_ANON_KEY = keyMeta.content;
+        console.log('✅ Configuration loaded from environment variables');
+        return true;
+    }
+    
+    console.error('❌ Configuration not found. Please create config.js from config.template.js or set environment variables');
+    showToast('Configuration error. Please check console.', 'error');
+    return false;
 }
 
 // Initialize Supabase client with better error handling

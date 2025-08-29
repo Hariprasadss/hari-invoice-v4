@@ -102,13 +102,50 @@ The application uses Supabase with the following main tables:
 - `expense_categories` - Expense categories
 - `settings` - Application settings
 
-## 🚨 Security Notes
+## � Netlify Deployment
+
+To deploy this application to Netlify:
+
+### 1. Set Environment Variables in Netlify
+
+Go to your Netlify site settings > Environment Variables and add:
+
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+APP_USERNAME=your_app_username
+APP_PASSWORD=your_app_password
+```
+
+### 2. Deploy Configuration
+
+The `netlify.toml` file is already configured with:
+- Build command: `node build.js`
+- Automatic environment variable injection
+- Redirect from root to login page
+
+### 3. Build Process
+
+The build script (`build.js`) automatically:
+- Reads environment variables from Netlify
+- Injects them as meta tags into HTML files
+- Keeps sensitive data secure (not in source code)
+
+### 4. Manual Deployment Steps
+
+1. Push your changes to GitHub
+2. Connect your GitHub repo to Netlify
+3. Set the environment variables in Netlify dashboard
+4. Deploy!
+
+## �🚨 Security Notes
 
 - **Never commit sensitive credentials to Git**
 - **Use strong passwords for authentication**
 - **Keep your Supabase keys secure**
 - **Regularly review access logs**
 - **Consider implementing 2FA for production use**
+- **Environment variables are secure in Netlify**
 
 ## 📈 Analytics Features
 
@@ -124,10 +161,12 @@ The application uses Supabase with the following main tables:
 - **Browser Compatibility**: Use modern browsers (Chrome, Firefox, Safari, Edge)
 - **Mobile**: Application is responsive and works on mobile devices
 - **Performance**: Clear browser cache if you experience issues
+- **Local Development**: Use `config.js` for local development
+- **Production**: Use Netlify environment variables for production
 
 ## 🤝 Support
 
-For issues or questions, please check the console for error messages and ensure your `config.js` is properly set up.
+For issues or questions, please check the console for error messages and ensure your `config.js` is properly set up for local development or environment variables are set for production.
 
 ---
 
