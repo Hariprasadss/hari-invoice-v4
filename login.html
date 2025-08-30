@@ -482,17 +482,31 @@
             // Simulate async login (remove this setTimeout in production)
             setTimeout(() => {
                 // Check if config is available
-                if (typeof window.appConfig === 'undefined') {
-                    submitBtn.classList.remove('loading');
-                    submitBtn.textContent = 'Sign In';
-                    errorDiv.textContent = 'Configuration error. Please ensure config.js exists.';
-                    errorDiv.style.display = 'block';
-                    return;
+                // Check if configuration is available (config.js or environment variables)
+                let validUsername, validPassword;
+                
+                // Try to get from config.js first (development)
+                if (typeof window.appConfig !== 'undefined' && window.appConfig.auth) {
+                    validUsername = window.appConfig.auth.username;
+                    validPassword = window.appConfig.auth.password;
+                } else {
+                    // Fallback to environment variables (production/Netlify)
+                    const userMeta = document.querySelector('meta[name="app-username"]');
+                    const passMeta = document.querySelector('meta[name="app-password"]');
+                    
+                    if (userMeta && passMeta && userMeta.content && passMeta.content) {
+                        validUsername = userMeta.content;
+                        validPassword = passMeta.content;
+                    } else {
+                        submitBtn.classList.remove('loading');
+                        submitBtn.textContent = 'Sign In';
+                        errorDiv.textContent = 'Configuration error. Unable to load authentication settings.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
                 }
 
-                // Check credentials from config
-                const validUsername = window.appConfig.auth.username;
-                const validPassword = window.appConfig.auth.password;
+                // Check credentials
                 
                 if (username === validUsername && password === validPassword) {
                     // Store login state
